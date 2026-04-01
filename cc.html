@@ -1,0 +1,1424 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Code Explanation Tool</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #080c14;
+        --surface: #0e1420;
+        --surface2: #141c2e;
+        --border: #1e2d4a;
+        --border2: #243657;
+        --accent: #3b82f6;
+        --accent2: #8b5cf6;
+        --accent3: #10b981;
+        --text: #e2e8f0;
+        --text2: #94a3b8;
+        --text3: #64748b;
+        --red: #f87171;
+        --amber: #fbbf24;
+        --green: #34d399;
+        --pink: #f472b6;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "Syne", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        line-height: 1.6;
+      }
+
+      /* Background grid pattern */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .app {
+        position: relative;
+        z-index: 1;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1.5rem 4rem;
+      }
+
+      /* Header */
+      .header {
+        text-align: center;
+        margin-bottom: 3rem;
+        padding-top: 1rem;
+      }
+      .header-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        border-radius: 100px;
+        padding: 6px 16px;
+        font-size: 0.78rem;
+        color: #60a5fa;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        font-weight: 600;
+        margin-bottom: 1.2rem;
+      }
+      .header-badge::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #60a5fa;
+        animation: pulse 2s infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+
+      .header h1 {
+        font-size: clamp(2rem, 5vw, 3.2rem);
+        font-weight: 800;
+        background: linear-gradient(
+          135deg,
+          #e2e8f0 0%,
+          #60a5fa 40%,
+          #a78bfa 70%,
+          #34d399 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.15;
+        margin-bottom: 0.75rem;
+      }
+      .header p {
+        color: var(--text2);
+        font-size: 1rem;
+        max-width: 520px;
+        margin: 0 auto;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.85rem;
+      }
+
+      /* Layout */
+      .workspace {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+      @media (max-width: 900px) {
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Cards */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.5rem;
+        position: relative;
+        overflow: hidden;
+      }
+      .card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(99, 102, 241, 0.4),
+          transparent
+        );
+      }
+
+      .card-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text3);
+        margin-bottom: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .card-label span {
+        width: 18px;
+        height: 18px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+      }
+      .lbl-blue {
+        background: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+      }
+      .lbl-purple {
+        background: rgba(139, 92, 246, 0.15);
+        color: #a78bfa;
+      }
+
+      /* Language selector */
+      .lang-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+      }
+      .lang-btn {
+        padding: 5px 14px;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        border: 1px solid var(--border2);
+        background: var(--surface2);
+        color: var(--text2);
+        cursor: pointer;
+        transition: all 0.15s;
+        font-family: "JetBrains Mono", monospace;
+      }
+      .lang-btn:hover {
+        border-color: var(--accent);
+        color: var(--text);
+      }
+      .lang-btn.active {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: #3b82f6;
+        color: #60a5fa;
+      }
+
+      /* Code editor area */
+      .editor-wrap {
+        position: relative;
+      }
+      .line-nums {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 36px;
+        background: var(--surface2);
+        border-right: 1px solid var(--border);
+        border-radius: 10px 0 0 10px;
+        padding: 12px 0;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11px;
+        color: var(--text3);
+        text-align: right;
+        padding-right: 8px;
+        user-select: none;
+        overflow: hidden;
+        line-height: 1.6;
+        pointer-events: none;
+      }
+      textarea {
+        width: 100%;
+        min-height: 260px;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--text);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.83rem;
+        padding: 12px 12px 12px 48px;
+        resize: vertical;
+        outline: none;
+        line-height: 1.6;
+        transition: border-color 0.2s;
+      }
+      textarea:focus {
+        border-color: #3b82f6;
+      }
+      textarea::placeholder {
+        color: var(--text3);
+      }
+
+      /* Analyze button */
+      .btn-row {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1.1rem;
+      }
+      .btn-analyze {
+        flex: 1;
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        border: none;
+        border-radius: 10px;
+        color: white;
+        font-family: "Syne", sans-serif;
+        font-size: 0.9rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        letter-spacing: 0.02em;
+      }
+      .btn-analyze:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 25px rgba(37, 99, 235, 0.35);
+      }
+      .btn-analyze:active {
+        transform: translateY(0);
+      }
+      .btn-analyze:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+      .btn-clear {
+        padding: 0.75rem 1.2rem;
+        border-radius: 10px;
+        border: 1px solid var(--border2);
+        background: transparent;
+        color: var(--text2);
+        font-family: "Syne", sans-serif;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .btn-clear:hover {
+        border-color: var(--red);
+        color: var(--red);
+      }
+
+      /* Loader */
+      .loader {
+        display: none;
+        align-items: center;
+        gap: 10px;
+        color: var(--text2);
+        font-size: 0.85rem;
+        margin-top: 1rem;
+      }
+      .loader.show {
+        display: flex;
+      }
+      .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid var(--border2);
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Results panel */
+      .results {
+        display: none;
+      }
+      .results.visible {
+        display: block;
+      }
+
+      /* Tabs */
+      .tabs {
+        display: flex;
+        gap: 4px;
+        background: var(--surface2);
+        border-radius: 12px;
+        padding: 4px;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border);
+      }
+      .tab {
+        flex: 1;
+        padding: 8px 12px;
+        border-radius: 9px;
+        border: none;
+        background: transparent;
+        color: var(--text3);
+        font-family: "Syne", sans-serif;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-align: center;
+      }
+      .tab.active {
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--border2);
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+        animation: fadeIn 0.25s ease;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Explanation steps */
+      .step-list {
+        list-style: none;
+      }
+      .step {
+        display: flex;
+        gap: 14px;
+        padding: 0.9rem 0;
+        border-bottom: 1px solid var(--border);
+        animation: fadeIn 0.3s ease both;
+      }
+      .step:last-child {
+        border-bottom: none;
+      }
+      .step-num {
+        width: 26px;
+        height: 26px;
+        border-radius: 8px;
+        flex-shrink: 0;
+        background: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+        font-size: 11px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 1px;
+        font-family: "JetBrains Mono", monospace;
+      }
+      .step-text {
+        font-size: 0.9rem;
+        color: var(--text2);
+        line-height: 1.65;
+      }
+      .step-text strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+      code {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        padding: 1px 6px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.8rem;
+        color: #a78bfa;
+      }
+
+      /* Complexity cards */
+      .complexity-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+      }
+      .complexity-card {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.2rem;
+      }
+      .c-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text3);
+        margin-bottom: 0.4rem;
+      }
+      .c-value {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 1.6rem;
+        font-weight: 600;
+        margin-bottom: 0.3rem;
+      }
+      .c-time {
+        color: #60a5fa;
+      }
+      .c-space {
+        color: #a78bfa;
+      }
+      .c-desc {
+        font-size: 0.8rem;
+        color: var(--text2);
+      }
+      .c-bar {
+        height: 4px;
+        border-radius: 2px;
+        margin-top: 0.75rem;
+        background: var(--border);
+        overflow: hidden;
+      }
+      .c-fill {
+        height: 100%;
+        border-radius: 2px;
+        transition: width 0.8s ease;
+      }
+
+      /* Highlights */
+      .highlight-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+      }
+      .highlight-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.8rem 1rem;
+      }
+      .h-tag {
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 5px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        font-family: "JetBrains Mono", monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .tag-loop {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+      }
+      .tag-func {
+        background: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+      }
+      .tag-cond {
+        background: rgba(251, 191, 36, 0.15);
+        color: #fbbf24;
+      }
+      .tag-recur {
+        background: rgba(248, 113, 113, 0.15);
+        color: #f87171;
+      }
+      .tag-class {
+        background: rgba(244, 114, 182, 0.15);
+        color: #f472b6;
+      }
+      .tag-var {
+        background: rgba(139, 92, 246, 0.15);
+        color: #a78bfa;
+      }
+      .h-text {
+        font-size: 0.85rem;
+        color: var(--text2);
+        line-height: 1.5;
+      }
+
+      /* Improvements */
+      .improve-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .improve-item {
+        display: flex;
+        gap: 12px;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 1rem;
+      }
+      .improve-icon {
+        font-size: 1.1rem;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .improve-title {
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 2px;
+      }
+      .improve-desc {
+        font-size: 0.82rem;
+        color: var(--text2);
+        line-height: 1.5;
+      }
+
+      /* Empty state */
+      .empty {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--text3);
+        border: 1px dashed var(--border2);
+        border-radius: 12px;
+        font-size: 0.9rem;
+      }
+      .empty-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.75rem;
+        opacity: 0.5;
+      }
+
+      /* Summary bar */
+      .summary-bar {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.5rem;
+      }
+      .summary-stat {
+        text-align: center;
+        flex: 1;
+        min-width: 80px;
+      }
+      .s-val {
+        font-size: 1.5rem;
+        font-weight: 700;
+        font-family: "JetBrains Mono", monospace;
+      }
+      .s-lbl {
+        font-size: 0.72rem;
+        color: var(--text3);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-top: 2px;
+      }
+
+      /* Footer */
+      .footer {
+        text-align: center;
+        margin-top: 3rem;
+        color: var(--text3);
+        font-size: 0.78rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="header">
+        <div class="header-badge"></div>
+        <h1>AI Code Explanation Tool</h1>
+        <p>
+          paste your code → get instant explanation, complexity & improvements
+        </p>
+      </div>
+
+      <div class="workspace">
+        <!-- Input Card -->
+        <div class="card">
+          <div class="card-label">
+            <span class="lbl-blue">01</span> Select Language & Paste Code
+          </div>
+
+          <div class="lang-row" id="langRow">
+            <button class="lang-btn active" data-lang="python">Python</button>
+            <button class="lang-btn" data-lang="javascript">JavaScript</button>
+            <button class="lang-btn" data-lang="java">Java</button>
+            <button class="lang-btn" data-lang="c">C</button>
+            <button class="lang-btn" data-lang="cpp">C++</button>
+          </div>
+
+          <div class="editor-wrap">
+            <div class="line-nums" id="lineNums">1</div>
+            <textarea
+              id="codeInput"
+              placeholder="# Paste your code here...
+# Example:
+def bubble_sort(arr):
+    n = len(arr)
+    for i in range(n):
+        for j in range(0, n-i-1):
+            if arr[j] > arr[j+1]:
+                arr[j], arr[j+1] = arr[j+1], arr[j]
+    return arr"
+              spellcheck="false"
+            ></textarea>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-analyze" id="analyzeBtn" onclick="analyzeCode()">
+              ⚡ Analyze Code
+            </button>
+            <button class="btn-clear" onclick="clearAll()">✕ Clear</button>
+          </div>
+
+          <div class="loader" id="loader">
+            <div class="spinner"></div>
+            <span>Analyzing code structure...</span>
+          </div>
+        </div>
+
+        <!-- Right Card - Summary + Highlights -->
+        <div class="card">
+          <div class="card-label">
+            <span class="lbl-purple">02</span> Code Overview
+          </div>
+
+          <div id="overviewEmpty" class="empty">
+            <div class="empty-icon">🔍</div>
+            Paste code and click Analyze to see the overview
+          </div>
+
+          <div id="overviewContent" style="display: none">
+            <div class="summary-bar" id="summaryBar"></div>
+            <div class="complexity-grid" id="complexityGrid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results Section -->
+      <div class="results" id="results">
+        <div class="card">
+          <div class="tabs">
+            <button class="tab active" onclick="switchTab('explanation', this)">
+              📖 Step-by-Step
+            </button>
+            <button class="tab" onclick="switchTab('highlights', this)">
+              🔎 Code Highlights
+            </button>
+            <button class="tab" onclick="switchTab('improvements', this)">
+              💡 Improvements
+            </button>
+          </div>
+
+          <div class="tab-content active" id="tab-explanation">
+            <ul class="step-list" id="stepList"></ul>
+          </div>
+
+          <div class="tab-content" id="tab-highlights">
+            <div class="highlight-list" id="highlightList"></div>
+          </div>
+
+          <div class="tab-content" id="tab-improvements">
+            <div class="improve-list" id="improveList"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer"></div>
+    </div>
+
+    <script>
+      let selectedLang = "python";
+
+      // Language button selection
+      document.getElementById("langRow").addEventListener("click", (e) => {
+        const btn = e.target.closest(".lang-btn");
+        if (!btn) return;
+        document
+          .querySelectorAll(".lang-btn")
+          .forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        selectedLang = btn.dataset.lang;
+        updatePlaceholder();
+      });
+
+      function updatePlaceholder() {
+        const placeholders = {
+          python: `# Example: Bubble Sort in Python
+def bubble_sort(arr):
+    n = len(arr)
+    for i in range(n):
+        for j in range(0, n-i-1):
+            if arr[j] > arr[j+1]:
+                arr[j], arr[j+1] = arr[j+1], arr[j]
+    return arr`,
+          javascript: `// Example: Binary Search in JavaScript
+function binarySearch(arr, target) {
+    let left = 0, right = arr.length - 1;
+    while (left <= right) {
+        let mid = Math.floor((left + right) / 2);
+        if (arr[mid] === target) return mid;
+        else if (arr[mid] < target) left = mid + 1;
+        else right = mid - 1;
+    }
+    return -1;
+}`,
+          java: `// Example: Factorial in Java
+public class Main {
+    public static int factorial(int n) {
+        if (n == 0) return 1;
+        return n * factorial(n - 1);
+    }
+}`,
+          c: `// Example: Linked List in C
+#include <stdio.h>
+struct Node {
+    int data;
+    struct Node* next;
+};
+void printList(struct Node* n) {
+    while (n != NULL) {
+        printf("%d\\n", n->data);
+        n = n->next;
+    }
+}`,
+          cpp: `// Example: Stack in C++
+#include <stack>
+#include <iostream>
+using namespace std;
+int main() {
+    stack<int> s;
+    s.push(1); s.push(2); s.push(3);
+    while (!s.empty()) {
+        cout << s.top() << endl;
+        s.pop();
+    }
+}`,
+        };
+        document.getElementById("codeInput").placeholder =
+          placeholders[selectedLang] || "";
+      }
+
+      // Line numbers
+      document
+        .getElementById("codeInput")
+        .addEventListener("input", updateLineNums);
+      function updateLineNums() {
+        const lines = document
+          .getElementById("codeInput")
+          .value.split("\n").length;
+        document.getElementById("lineNums").innerHTML = Array.from(
+          { length: lines },
+          (_, i) => i + 1,
+        ).join("<br>");
+      }
+
+      function switchTab(name, el) {
+        document
+          .querySelectorAll(".tab")
+          .forEach((t) => t.classList.remove("active"));
+        document
+          .querySelectorAll(".tab-content")
+          .forEach((t) => t.classList.remove("active"));
+        el.classList.add("active");
+        document.getElementById("tab-" + name).classList.add("active");
+      }
+
+      function clearAll() {
+        document.getElementById("codeInput").value = "";
+        document.getElementById("results").classList.remove("visible");
+        document.getElementById("overviewEmpty").style.display = "block";
+        document.getElementById("overviewContent").style.display = "none";
+        updateLineNums();
+      }
+
+      // ─── CORE ANALYSIS ENGINE ────────────────────────────────────────
+      function analyzeCode() {
+        const code = document.getElementById("codeInput").value.trim();
+        if (!code) {
+          alert("Please paste some code first!");
+          return;
+        }
+
+        document.getElementById("analyzeBtn").disabled = true;
+        document.getElementById("loader").classList.add("show");
+
+        setTimeout(() => {
+          try {
+            const result = runAnalysis(code, selectedLang);
+            renderResults(result);
+          } catch (e) {
+            console.error(e);
+          }
+          document.getElementById("analyzeBtn").disabled = false;
+          document.getElementById("loader").classList.remove("show");
+        }, 800);
+      }
+
+      function runAnalysis(code, lang) {
+        const lines = code.split("\n").filter((l) => l.trim());
+        const totalLines = code.split("\n").length;
+        const comments = countComments(code, lang);
+        const highlights = detectHighlights(code, lang);
+        const complexity = estimateComplexity(code, lang);
+        const steps = generateExplanation(code, lang, highlights);
+        const improvements = generateImprovements(code, lang, highlights);
+        return {
+          lines: totalLines,
+          comments,
+          highlights,
+          complexity,
+          steps,
+          improvements,
+        };
+      }
+
+      function countComments(code, lang) {
+        let count = 0;
+        const lines = code.split("\n");
+        lines.forEach((l) => {
+          const t = l.trim();
+          if (lang === "python" && t.startsWith("#")) count++;
+          if (
+            ["javascript", "java", "c", "cpp"].includes(lang) &&
+            (t.startsWith("//") || t.startsWith("*") || t.startsWith("/*"))
+          )
+            count++;
+        });
+        return count;
+      }
+
+      function detectHighlights(code, lang) {
+        const items = [];
+        const lines = code.split("\n");
+
+        // Detect loops
+        const loopPatterns = {
+          python: [/^\s*for\s+\w/, /^\s*while\s+/],
+          javascript: [
+            /\bfor\s*\(/,
+            /\bwhile\s*\(/,
+            /\.forEach\s*\(/,
+            /\.map\s*\(/,
+            /\.filter\s*\(/,
+          ],
+          java: [/\bfor\s*\(/, /\bwhile\s*\(/],
+          c: [/\bfor\s*\(/, /\bwhile\s*\(/],
+          cpp: [/\bfor\s*\(/, /\bwhile\s*\(/],
+        };
+
+        // Detect functions/methods
+        const funcPatterns = {
+          python: [/^\s*def\s+(\w+)\s*\(/],
+          javascript: [
+            /function\s+(\w+)\s*\(/,
+            /const\s+(\w+)\s*=\s*(async\s*)?\(/,
+            /(\w+)\s*:\s*function/,
+            /(\w+)\s*=\s*\(.*\)\s*=>/,
+          ],
+          java: [/(public|private|protected|static)[\s\w]*\s+(\w+)\s*\(/],
+          c: [/^[\w\*]+\s+(\w+)\s*\(/],
+          cpp: [/^[\w\*]+\s+(\w+)\s*\(/],
+        };
+
+        // Detect conditionals
+        const condPatterns = {
+          python: [/^\s*if\s+/, /^\s*elif\s+/, /^\s*else:/],
+          javascript: [/\bif\s*\(/, /\belse\s*{/, /\bswitch\s*\(/],
+          java: [/\bif\s*\(/, /\bswitch\s*\(/],
+          c: [/\bif\s*\(/, /\bswitch\s*\(/],
+          cpp: [/\bif\s*\(/, /\bswitch\s*\(/],
+        };
+
+        // Detect recursion
+        const funcNames = [];
+        lines.forEach((line, i) => {
+          const fp = funcPatterns[lang] || [];
+          fp.forEach((pat) => {
+            const m = line.match(pat);
+            if (m) {
+              const fn = m[1] || m[2];
+              if (fn) funcNames.push({ name: fn, line: i });
+            }
+          });
+        });
+
+        const loopLines = [],
+          condLines = [],
+          recurLines = [];
+        let classCount = 0;
+
+        lines.forEach((line, i) => {
+          const lp = loopPatterns[lang] || [];
+          if (lp.some((p) => p.test(line))) {
+            loopLines.push({ line: i + 1, code: line.trim().substring(0, 60) });
+          }
+          const cp = condPatterns[lang] || [];
+          if (cp.some((p) => p.test(line))) {
+            condLines.push({ line: i + 1, code: line.trim().substring(0, 60) });
+          }
+          if (/\bclass\s+\w/.test(line)) classCount++;
+        });
+
+        // Check recursion
+        funcNames.forEach((fn) => {
+          lines.forEach((line, i) => {
+            if (i > fn.line && new RegExp(`\\b${fn.name}\\s*\\(`).test(line)) {
+              recurLines.push({ name: fn.name, callLine: i + 1 });
+            }
+          });
+        });
+
+        // Build highlight items
+        loopLines.forEach((l) => {
+          items.push({
+            tag: "loop",
+            text: `Loop at line ${l.line}: <code>${l.code}</code>`,
+          });
+        });
+        funcNames.forEach((f) => {
+          items.push({
+            tag: "func",
+            text: `Function/Method defined: <code>${f.name}()</code> at line ${f.line + 1}`,
+          });
+        });
+        condLines.slice(0, 6).forEach((l) => {
+          items.push({
+            tag: "cond",
+            text: `Conditional at line ${l.line}: <code>${l.code}</code>`,
+          });
+        });
+        recurLines.forEach((r) => {
+          items.push({
+            tag: "recur",
+            text: `Recursion detected — <code>${r.name}()</code> calls itself at line ${r.callLine}`,
+          });
+        });
+        if (classCount > 0)
+          items.push({
+            tag: "class",
+            text: `${classCount} class definition${classCount > 1 ? "s" : ""} found in code`,
+          });
+
+        return {
+          items,
+          loopCount: loopLines.length,
+          funcCount: funcNames.length,
+          condCount: condLines.length,
+          recurCount: recurLines.length,
+          classCount,
+        };
+      }
+
+      function estimateComplexity(code, lang) {
+        const lines = code.split("\n");
+        let nested = 0,
+          maxNest = 0,
+          currentNest = 0;
+        let hasRecursion = false;
+        const funcNames = [];
+
+        // Detect function names
+        lines.forEach((line) => {
+          const m = line.match(/def\s+(\w+)|function\s+(\w+)/);
+          if (m) funcNames.push(m[1] || m[2]);
+        });
+
+        // Count nesting depth
+        lines.forEach((line) => {
+          const t = line.trim();
+          if (/\bfor\b|\bwhile\b/.test(t)) {
+            currentNest++;
+            maxNest = Math.max(maxNest, currentNest);
+          }
+          funcNames.forEach((fn) => {
+            if (new RegExp(`\\b${fn}\\s*\\(`).test(t)) hasRecursion = true;
+          });
+        });
+
+        // Estimate based on nesting
+        let timeComp = "O(1)",
+          timeDesc = "Constant — no loops detected";
+        let timePercent = 10;
+
+        if (hasRecursion) {
+          timeComp = "O(2ⁿ) or O(n log n)";
+          timeDesc = "Recursive — depends on call tree depth";
+          timePercent = 80;
+        } else if (maxNest >= 3) {
+          timeComp = "O(n³)";
+          timeDesc = "Cubic — triply nested loops";
+          timePercent = 95;
+        } else if (maxNest === 2) {
+          timeComp = "O(n²)";
+          timeDesc = "Quadratic — nested loops found";
+          timePercent = 75;
+        } else if (maxNest === 1) {
+          // Check for binary search pattern
+          if (/mid|binary|log/i.test(code)) {
+            timeComp = "O(log n)";
+            timeDesc = "Logarithmic — search/divide pattern";
+            timePercent = 30;
+          } else {
+            timeComp = "O(n)";
+            timeDesc = "Linear — single loop over input";
+            timePercent = 50;
+          }
+        }
+
+        // Space complexity
+        let spaceComp = "O(1)",
+          spaceDesc = "Constant extra space used";
+        let spacePercent = 10;
+        const hasList = /\[\]|list\(|new ArrayList|vector<|push|append/i.test(
+          code,
+        );
+        const hasRecurSpace = hasRecursion;
+        if (hasRecurSpace) {
+          spaceComp = "O(n)";
+          spaceDesc = "Recursion stack uses n space";
+          spacePercent = 55;
+        } else if (hasList) {
+          spaceComp = "O(n)";
+          spaceDesc = "Extra array/list allocated";
+          spacePercent = 50;
+        }
+
+        return {
+          timeComp,
+          timeDesc,
+          timePercent,
+          spaceComp,
+          spaceDesc,
+          spacePercent,
+        };
+      }
+
+      function generateExplanation(code, lang, highlights) {
+        const lines = code.split("\n").filter((l) => l.trim());
+        const steps = [];
+        let stepNum = 1;
+
+        // Detect imports
+        const importLines = lines.filter((l) =>
+          /^import|^from|^#include|^using/.test(l.trim()),
+        );
+        if (importLines.length > 0) {
+          steps.push({
+            n: stepNum++,
+            text: `<strong>Imports / Dependencies:</strong> The code begins by importing <code>${importLines.map((l) => l.trim().substring(0, 40)).join("</code>, <code>")}</code> — these provide built-in functions and utilities used later.`,
+          });
+        }
+
+        // Detect class
+        const classMatch = code.match(/class\s+(\w+)/);
+        if (classMatch) {
+          steps.push({
+            n: stepNum++,
+            text: `<strong>Class Definition:</strong> A class named <code>${classMatch[1]}</code> is defined. Classes are blueprints for creating objects that bundle data and behavior together.`,
+          });
+        }
+
+        // Detect functions
+        const funcMatches = [
+          ...code.matchAll(
+            /def\s+(\w+)\s*\(([^)]*)\)|function\s+(\w+)\s*\(([^)]*)\)|(public|private|static)[\s\w]+\s+(\w+)\s*\(([^)]*)\)/g,
+          ),
+        ];
+        funcMatches.slice(0, 4).forEach((m) => {
+          const fname = m[1] || m[3] || m[6];
+          const params = (m[2] || m[4] || m[7] || "").trim();
+          if (fname && fname !== "main") {
+            steps.push({
+              n: stepNum++,
+              text: `<strong>Function <code>${fname}</code>:</strong> A function is defined${params ? ` that accepts <code>${params}</code> as input` : " with no parameters"}. This encapsulates a specific task or computation.`,
+            });
+          }
+        });
+
+        // Loops
+        if (highlights.loopCount > 0) {
+          const loopType =
+            highlights.loopCount > 1
+              ? `${highlights.loopCount} loops`
+              : "a loop";
+          steps.push({
+            n: stepNum++,
+            text: `<strong>Loop Execution:</strong> The code uses ${loopType} to iterate over elements. Each iteration processes one item, allowing the program to handle collections of data efficiently.`,
+          });
+        }
+
+        // Conditionals
+        if (highlights.condCount > 0) {
+          steps.push({
+            n: stepNum++,
+            text: `<strong>Conditional Logic:</strong> There ${highlights.condCount === 1 ? "is 1 conditional statement" : `are ${highlights.condCount} conditional statements`} (<code>if/else</code>) that control the program's flow — executing different code depending on whether a condition is true or false.`,
+          });
+        }
+
+        // Recursion
+        if (highlights.recurCount > 0) {
+          steps.push({
+            n: stepNum++,
+            text: `<strong>Recursive Call:</strong> The function calls itself — this is <strong>recursion</strong>. It breaks the problem into smaller sub-problems until reaching a base case, then combines results on the way back up the call stack.`,
+          });
+        }
+
+        // Return statement
+        if (/\breturn\b/.test(code)) {
+          steps.push({
+            n: stepNum++,
+            text: `<strong>Return Value:</strong> The function uses a <code>return</code> statement to send back a result to the caller. The calling code can use this returned value for further processing.`,
+          });
+        }
+
+        // Main/entry point
+        if (
+          /if\s+__name__\s*==\s*['"]__main__|int\s+main\s*\(\)|public\s+static\s+void\s+main/.test(
+            code,
+          )
+        ) {
+          steps.push({
+            n: stepNum++,
+            text: `<strong>Program Entry Point:</strong> The code includes a main entry point — this is where execution begins when the program is run directly.`,
+          });
+        }
+
+        // Final output
+        if (/print|printf|cout|console\.log|System\.out/.test(code)) {
+          steps.push({
+            n: stepNum++,
+            text: `<strong>Output:</strong> The program uses a print/output statement to display results to the user on the console/terminal.`,
+          });
+        }
+
+        if (steps.length === 0) {
+          steps.push({
+            n: 1,
+            text: `<strong>Code Structure:</strong> The code contains ${lines.length} lines. Try with a more complete code snippet (functions, loops, or classes) for a detailed step-by-step explanation.`,
+          });
+        }
+
+        return steps;
+      }
+
+      function generateImprovements(code, lang, highlights) {
+        const improvements = [];
+
+        // Check variable naming
+        if (
+          /\b[a-z]{1}\b/.test(code) &&
+          !/\bfor\b/.test(code.match(/\b[a-z]\b/)?.[0] || "")
+        ) {
+          improvements.push({
+            icon: "✏️",
+            title: "Improve variable naming",
+            desc: "Use descriptive variable names (e.g., <code>count</code> instead of <code>c</code>, <code>index</code> instead of <code>i</code>) to make code more readable and self-documenting.",
+          });
+        }
+
+        // Check for nested loops → suggest optimization
+        if (highlights.loopCount >= 2) {
+          improvements.push({
+            icon: "⚡",
+            title: "Optimize nested loops",
+            desc: "Nested loops result in O(n²) or higher complexity. Consider using hash maps, sets, or sorting to reduce to O(n log n) or O(n) where possible.",
+          });
+        }
+
+        // Check for recursion → suggest memoization
+        if (highlights.recurCount > 0) {
+          improvements.push({
+            icon: "🧠",
+            title: "Add memoization / caching",
+            desc: "Recursive functions often recompute the same values. Use a cache (dictionary/hashmap) to store results of expensive sub-calls — this is called <strong>memoization</strong> and can dramatically reduce time complexity.",
+          });
+        }
+
+        // Check for missing comments
+        const commentCount = countComments(code, lang);
+        if (commentCount < 2) {
+          improvements.push({
+            icon: "📝",
+            title: "Add comments and docstrings",
+            desc: "Code lacks sufficient comments. Add comments explaining the purpose of functions, complex logic, and important variables to improve maintainability.",
+          });
+        }
+
+        // Check for magic numbers
+        if (/[^'"]\b[2-9]\d{1,}\b/.test(code)) {
+          improvements.push({
+            icon: "🔢",
+            title: "Replace magic numbers with constants",
+            desc: "Hardcoded numbers make code hard to understand and maintain. Define them as named constants at the top (e.g., <code>MAX_SIZE = 100</code>) for clarity.",
+          });
+        }
+
+        // Suggest error handling
+        if (!/try|catch|except|throws|error/i.test(code)) {
+          improvements.push({
+            icon: "🛡️",
+            title: "Add error handling",
+            desc: "No error handling detected. Add <code>try/catch</code> (or <code>try/except</code> in Python) blocks to gracefully handle edge cases like empty inputs or invalid types.",
+          });
+        }
+
+        // Suggest early return
+        if (highlights.condCount > 2 && highlights.recurCount === 0) {
+          improvements.push({
+            icon: "↩️",
+            title: "Use early returns to reduce nesting",
+            desc: 'Deep nesting of conditionals reduces readability. Consider returning early when conditions fail, keeping the "happy path" code at the lowest indentation level.',
+          });
+        }
+
+        // Language-specific
+        if (lang === "python") {
+          if (!code.includes("def ")) {
+            improvements.push({
+              icon: "🐍",
+              title: "Use functions for reusability",
+              desc: "Wrap repeated logic in <code>def</code> functions. This follows the DRY (Don't Repeat Yourself) principle and makes code easier to test and reuse.",
+            });
+          }
+          if (
+            code.includes("for") &&
+            !code.includes("enumerate") &&
+            code.includes("range(len")
+          ) {
+            improvements.push({
+              icon: "🔄",
+              title: "Use enumerate() instead of range(len())",
+              desc: "Replace <code>for i in range(len(arr))</code> with <code>for i, val in enumerate(arr)</code> — it's more Pythonic and avoids index-based access.",
+            });
+          }
+        }
+
+        if (lang === "javascript") {
+          if (code.includes("var ")) {
+            improvements.push({
+              icon: "🆕",
+              title: "Replace var with let or const",
+              desc: "<code>var</code> has function scope and can cause bugs. Use <code>const</code> for values that don't change, and <code>let</code> for mutable variables — they have block scope and are safer.",
+            });
+          }
+        }
+
+        if (improvements.length === 0) {
+          improvements.push({
+            icon: "✅",
+            title: "Code looks well-structured!",
+            desc: "No major issues detected. Consider adding unit tests to verify correctness and edge cases. Code quality improves with practice and peer review.",
+          });
+        }
+
+        return improvements;
+      }
+
+      // ─── RENDER ──────────────────────────────────────────────────────
+      function renderResults(result) {
+        // Summary bar
+        document.getElementById("summaryBar").innerHTML = `
+    <div class="summary-stat"><div class="s-val" style="color:#60a5fa">${result.lines}</div><div class="s-lbl">Total Lines</div></div>
+    <div class="summary-stat"><div class="s-val" style="color:#34d399">${result.highlights.funcCount}</div><div class="s-lbl">Functions</div></div>
+    <div class="summary-stat"><div class="s-val" style="color:#fbbf24">${result.highlights.loopCount}</div><div class="s-lbl">Loops</div></div>
+    <div class="summary-stat"><div class="s-val" style="color:#a78bfa">${result.highlights.condCount}</div><div class="s-lbl">Conditions</div></div>
+    <div class="summary-stat"><div class="s-val" style="color:#f87171">${result.highlights.recurCount}</div><div class="s-lbl">Recursions</div></div>
+  `;
+
+        // Complexity
+        const c = result.complexity;
+        document.getElementById("complexityGrid").innerHTML = `
+    <div class="complexity-card">
+      <div class="c-label">Time Complexity</div>
+      <div class="c-value c-time">${c.timeComp}</div>
+      <div class="c-desc">${c.timeDesc}</div>
+      <div class="c-bar"><div class="c-fill" style="width:${c.timePercent}%;background:linear-gradient(90deg,#2563eb,#7c3aed)"></div></div>
+    </div>
+    <div class="complexity-card">
+      <div class="c-label">Space Complexity</div>
+      <div class="c-value c-space">${c.spaceComp}</div>
+      <div class="c-desc">${c.spaceDesc}</div>
+      <div class="c-bar"><div class="c-fill" style="width:${c.spacePercent}%;background:linear-gradient(90deg,#7c3aed,#a855f7)"></div></div>
+    </div>
+  `;
+
+        document.getElementById("overviewEmpty").style.display = "none";
+        document.getElementById("overviewContent").style.display = "block";
+
+        // Steps
+        document.getElementById("stepList").innerHTML = result.steps
+          .map(
+            (s, i) => `
+    <li class="step" style="animation-delay:${i * 0.06}s">
+      <div class="step-num">0${s.n}</div>
+      <div class="step-text">${s.text}</div>
+    </li>`,
+          )
+          .join("");
+
+        // Highlights
+        const tagMap = {
+          loop: "tag-loop",
+          func: "tag-func",
+          cond: "tag-cond",
+          recur: "tag-recur",
+          class: "tag-class",
+          var: "tag-var",
+        };
+        const tagLabel = {
+          loop: "Loop",
+          func: "Function",
+          cond: "Conditional",
+          recur: "Recursion",
+          class: "Class",
+          var: "Variable",
+        };
+        document.getElementById("highlightList").innerHTML =
+          result.highlights.items.length > 0
+            ? result.highlights.items
+                .map(
+                  (h) => `
+        <div class="highlight-item">
+          <span class="h-tag ${tagMap[h.tag]}">${tagLabel[h.tag]}</span>
+          <span class="h-text">${h.text}</span>
+        </div>`,
+                )
+                .join("")
+            : '<div class="empty"><div class="empty-icon">🔎</div>No specific structures detected. Try pasting a longer code snippet.</div>';
+
+        // Improvements
+        document.getElementById("improveList").innerHTML = result.improvements
+          .map(
+            (im) => `
+    <div class="improve-item">
+      <span class="improve-icon">${im.icon}</span>
+      <div>
+        <div class="improve-title">${im.title}</div>
+        <div class="improve-desc">${im.desc}</div>
+      </div>
+    </div>`,
+          )
+          .join("");
+
+        document.getElementById("results").classList.add("visible");
+        document
+          .getElementById("results")
+          .scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    </script>
+  </body>
+</html>
